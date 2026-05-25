@@ -1,11 +1,13 @@
 ---
-name: pptify-json-spec-authoring
-description: "Author or repair coordinate-explicit pptify JSON deck specs. Use when writing slide JSON with layout_tree groups, objects, bboxes, tables, images, lines, shapes, or collision-safe content objects."
+name: pptify-slide-spec
+description: "Author or repair coordinate-explicit pptify JSON deck specs. Use when writing layout_tree groups, objects, bboxes, tables, images, lines, shapes, type scale, or collision-safe content."
 ---
 
-# PPTify JSON Spec Authoring
+# PPTify Slide Spec
 
-Use this skill when writing or repairing a coordinate-explicit JSON deck spec for plugin audits or a restored renderer.
+Use this skill when writing or repairing a coordinate-explicit JSON deck spec.
+
+Author final coordinates directly in `layout_tree`; current plugin scripts will not choose layouts, measure browser boxes, or shrink text to fit. Split dense material across slides rather than relying on tiny fonts.
 
 ## Deck Shape
 
@@ -15,11 +17,11 @@ Use this skill when writing or repairing a coordinate-explicit JSON deck spec fo
 - When source-backed design context from `pptify-design` is used, record selected profile IDs, source URLs, and license IDs in `summary.design_context`.
 - For newly generated decks, `summary.design_context` is required unless a user-provided brand guide or reference PPTX is documented as the primary style source.
 - Use `render_mode: "layout"` or omit it for generated decks; OOXML mode is for extracted specs with `ooxml_elements`.
-- Every generated slide must include `layout_tree`; do not rely on shorthand layout specs unless a restored renderer explicitly supports them.
+- Every generated slide must include `layout_tree`; do not rely on shorthand layout specs.
 
 ## Slide Fields
 
-- Each generated slide should include `id`, `title`, and `layout_tree`.
+- Each generated slide must include `id`, `title`, and `layout_tree`.
 - Use `hidden: true` only for appendix/reference slides that should remain in the PPTX package but not appear during normal presentation.
 - Do not use `pattern`, `layout_pattern`, `composition.pattern`, `layout`, `sections`, `bullets`, `objects`, or `theme` as render-time shorthand.
 - Do not overfill a slide: prefer three to five major content groups.
@@ -74,7 +76,7 @@ Example skeleton:
 
 ## Groups
 
-- Each group should include `id`, `role`, `layout_mode`, `object_ids`, `group_ids`, and `bbox`.
+- Each group must include `id`, `role`, `layout_mode`, `object_ids`, `group_ids`, and `bbox`.
 - Use `layout_mode: "absolute"` for generated slides to make the coordinate contract explicit.
 - Keep group IDs unique and stable so audit repairs can target them.
 - Use groups for semantic organization and audit readability; coordinates are still final object coordinates.
@@ -82,11 +84,12 @@ Example skeleton:
 ## Objects
 
 - Every object must include `id`, `kind`, `role`, `classification`, `content`, `style`, `bbox`, and `z_index`.
-- Supported `kind` values include `text`, `shape`, `image`, `line`, and `table`.
+- Supported `kind` values: `text`, `shape`, `image`, `line`, `table`.
+- Supported shape names (`content.shape`): `rect`, `round_rect`, `oval`, `triangle`, `diamond`, `hexagon`, `parallelogram`, `chevron`, `pentagon`, `trapezoid`, and arrow variants.
 - Use `classification: "layout_design"` for decorative or background objects.
 - Use `classification: "content"` for meaningful text, tables, lines, and media.
 - Shape content must include `content.shape`; text on a shape uses `content.text`.
-- Image content can use `content.path`, `content.blob_base64`, and `content.alt`.
+- Image content uses `content.path`, `content.blob_base64`, and `content.alt`.
 - Table content uses `content.rows` as a list of row arrays.
 - Line content must include `content.x1`, `content.y1`, `content.x2`, and `content.y2`.
 - Do not use `chart` objects; render charts as explicit shapes, labels, lines, tables, or file-backed images.
@@ -94,15 +97,14 @@ Example skeleton:
 ## Styling
 
 - Every text-bearing object and table must include `style.font_size` and `style.color`.
+- Every line object must include `style.line` and `style.line_width`.
+- Every shape object must include `content.shape`, `style.fill`, and `style.line`.
 - Specify text color with `style.color`; do not rely on a later tool to infer contrast or default text color.
-- Specify shape fill and line styling with `style.fill`, `style.line`, `style.line_width`, and related keys.
-- Use low `z_index` values for backgrounds and decorations, higher values for content.
-- If a vector-traced SVG is provided only for editability, keep the readable raster image in the visible slide and put the SVG image object on a separate hidden final slide.
-- Every normal content slide should include at least one `layout_design` object or style-derived visual structure from the locked design context, such as an accent band, card shell, grid, divider rule, signature shape, or image treatment.
+- Use `z_index` intentionally: low values for backgrounds and decorations, higher for text and foreground content.
+- Every normal content slide must include at least one `layout_design` object or style-derived visual structure such as an accent band, card shell, grid, divider rule, signature shape, or image treatment.
+- If a vector-traced SVG is provided only for editability, keep the readable raster image in the visible slide and put the SVG on a separate hidden final slide.
 
 ### Type Scale
-
-Use these as the starting point for `style.font_size`. Never go below the minimum for `classification: "content"` objects.
 
 | Role | Recommended (pt) | Minimum (pt) |
 |---|---|---|

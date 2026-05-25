@@ -1,0 +1,215 @@
+param(
+    [string]$Version = "1.0.0",
+    [string]$PluginId = "pptify",
+    [string]$Repository = "https://github.com/kimtth/agent-pptify-kit",
+    [string]$AuthorName = "PPTify maintainers"
+)
+
+$ErrorActionPreference = "Stop"
+
+$scriptPath = $PSCommandPath
+if (-not $scriptPath) {
+    $scriptPath = $MyInvocation.MyCommand.Path
+}
+
+$deployRoot = Split-Path -Parent $scriptPath
+$repoRoot = Split-Path -Parent $deployRoot
+$awesomeRoot = Join-Path $deployRoot "awesome-copilot"
+$pluginRoot = Join-Path $awesomeRoot "plugins\$PluginId"
+$pluginMetadataDir = Join-Path $pluginRoot ".github\plugin"
+$runtimeRoot = Join-Path $pluginRoot ".agent"
+$manifestPath = Join-Path $deployRoot "manifest.json"
+
+function ConvertTo-PrettyJsonFile {
+    param(
+        [Parameter(Mandatory = $true)] [object]$InputObject,
+        [Parameter(Mandatory = $true)] [string]$Path,
+        [int]$Depth = 10
+    )
+
+    $json = $InputObject | ConvertTo-Json -Depth $Depth
+    Write-Utf8NoBom -Path $Path -Value $json
+}
+
+function Write-Utf8NoBom {
+    param(
+        [Parameter(Mandatory = $true)] [string]$Path,
+        [Parameter(Mandatory = $true)] [string]$Value
+    )
+
+    $encoding = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($Path, $Value, $encoding)
+}
+
+function Get-RelativeDeployPath {
+    param([Parameter(Mandatory = $true)] [string]$Path)
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    $basePath = [System.IO.Path]::GetFullPath($repoRoot)
+    if (-not $basePath.EndsWith("\")) {
+        $basePath = "$basePath\"
+    }
+    if ($fullPath.StartsWith($basePath, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $fullPath.Substring($basePath.Length).Replace("/", "\")
+    }
+    return $fullPath.Replace("/", "\")
+}
+
+Push-Location -LiteralPath $repoRoot
+try {
+    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+        throw "uv is required to generate deploy artifacts."
+    }
+
+    if (Test-Path -LiteralPath $awesomeRoot) {
+        Remove-Item -LiteralPath $awesomeRoot -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $pluginMetadataDir -Force | Out-Null
+
+    & uv run python pptify-cli install --home $pluginRoot
+    if ($LASTEXITCODE -ne 0) {
+        throw "pptify-cli install failed with exit code $LASTEXITCODE."
+    }
+
+    $runtimeSkillsRoot = Join-Path $runtimeRoot "skills"
+    if (-not (Test-Path -LiteralPath $runtimeSkillsRoot)) {
+        throw "Generated skills directory was not found: $runtimeSkillsRoot"
+    }
+
+    $skills = Get-ChildItem -LiteralPath $runtimeSkillsRoot -Directory |
+        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "SKILL.md") } |
+        Sort-Object Name
+
+    $pluginJson = [ordered]@{
+        name = $PluginId
+        description = "Generate production-ready PowerPoint decks with pptify skills, source ingestion, design-context selection, coordinate-explicit slide specs, visual assets, runtime tooling, and audit-driven quality gates."
+        version = $Version
+        author = [ordered]@{
+            name = $AuthorName
+        }
+        repository = $Repository
+        license = "MIT"
+        keywords = @(
+            "pptify",
+            "powerpoint",
+            "pptx",
+            "presentations",
+            "deck-generation",
+            "slides",
+            "design-context",
+            "visual-assets",
+            "quality-gates"
+        )
+    }
+    ConvertTo-PrettyJsonFile -InputObject $pluginJson -Path (Join-Path $pluginMetadataDir "plugin.json")
+
+    $readme = @'
+# PPTify Plugin
+
+Generate production-ready PowerPoint decks with pptify skills, source ingestion, design context, coordinate-explicit slide specs, visual assets, runtime tooling, and audit-driven quality gates.
+
+## Installation
+
+```bash
+copilot plugin install pptify@awesome-copilot
+```
+
+## What's Included
+
+### Skills
+
+| Skill | Description |
+| --- | --- |
+| `pptify-context-prep` | Prepare source material and design context before authoring a pptify deck spec. |
+| `pptify-deck-generation` | Generate PPTX decks end to end from prompts, source material, reference PPTX analysis, coordinate-explicit layout trees, or pptify JSON specs. |
+| `pptify-quality-gates` | Validate and repair PPTX artifacts by checking specs, PPTX packages, audits, layout trees, collisions, text overflows, warnings, visual hierarchy, asset layering, and reference deck alignment. |
+| `pptify-slide-spec` | Author or repair coordinate-explicit pptify JSON deck specs with layout tree groups, objects, bounding boxes, tables, images, lines, shapes, type scale, and collision-safe content. |
+| `pptify-tooling` | Look up pptify install commands, plugin script syntax, and workspace reality checks. |
+| `pptify-visual-assets` | Find, generate, and place icons, images, SVGs, raster conversions, infographics, image placeholders, and asset-backed slide objects. |
+
+### Runtime artifacts generated by `pptify-cli`
+
+The plugin folder includes `.agent`, generated with:
+
+```powershell
+uv run python pptify-cli install --home deploy\awesome-copilot\plugins\pptify
+```
+
+That runtime bundle contains:
+
+| Artifact | Purpose |
+| --- | --- |
+| `.agent\skills\pptify-*` | Installed pptify skill set. |
+| `.agent\workflows\deck-generation.md` | End-to-end deck-generation workflow prompt. |
+| `.agent\pptify-plugin` | Source ingestion, design context, image/SVG, extraction, and audit helper tools. |
+| `.agent\pptify-design` | Source-backed design profiles and template context. |
+| `.agent\.env.template` | Image-provider configuration template. |
+| `.agent\pptify-policy.md` | Developer-protection and quality-gate policy. |
+| `.agent\copilot-instruction.md` | Generic coding-agent instruction for using installed pptify assets. |
+
+## Usage
+
+Ask Copilot to create or repair a deck and mention `pptify`. The plugin guides the agent to collect required deck inputs, prepare source and reference context, select a design profile, author a coordinate-explicit JSON spec, build through the available PowerPoint path, and repair audit findings before reporting artifact paths.
+
+## Source
+
+This plugin is generated from [kimtth/agent-pptify-kit](https://github.com/kimtth/agent-pptify-kit) for submission to [Awesome Copilot](https://github.com/github/awesome-copilot).
+
+## License
+
+MIT
+'@
+    Write-Utf8NoBom -Path (Join-Path $pluginRoot "README.md") -Value $readme
+
+    $manifest = [ordered]@{
+        name = "pptify-awesome-copilot-deploy"
+        targetRepository = "https://github.com/github/awesome-copilot"
+        pluginId = $PluginId
+        version = $Version
+        description = "Awesome Copilot PR artifacts for PPTify, including artifacts generated by pptify-cli."
+        generatedWith = [ordered]@{
+            command = "uv run python pptify-cli install --home deploy\awesome-copilot\plugins\$PluginId"
+            runtimeRoot = "deploy\awesome-copilot\plugins\$PluginId\.agent"
+        }
+        copyRoot = "deploy\awesome-copilot"
+        generator = "deploy\create-artifacts.ps1"
+        artifacts = @(
+            "deploy\awesome-copilot\plugins\$PluginId\.github\plugin\plugin.json",
+            "deploy\awesome-copilot\plugins\$PluginId\README.md",
+            "deploy\awesome-copilot\plugins\$PluginId\.agent"
+        )
+        validationCommands = @(
+            "npm install",
+            "npm run plugin:validate",
+            "npm run build"
+        )
+    }
+    ConvertTo-PrettyJsonFile -InputObject $manifest -Path $manifestPath
+
+    $requiredPaths = @(
+        (Join-Path $pluginMetadataDir "plugin.json"),
+        (Join-Path $pluginRoot "README.md"),
+        (Join-Path $runtimeRoot "workflows\deck-generation.md"),
+        (Join-Path $runtimeRoot "pptify-plugin\README.md"),
+        (Join-Path $runtimeRoot "pptify-design\sources.json"),
+        (Join-Path $runtimeRoot ".env.template"),
+        (Join-Path $runtimeRoot "pptify-policy.md"),
+        (Join-Path $runtimeRoot "copilot-instruction.md")
+    )
+    foreach ($path in $requiredPaths) {
+        if (-not (Test-Path -LiteralPath $path)) {
+            throw "Required artifact missing: $(Get-RelativeDeployPath -Path $path)"
+        }
+    }
+
+    $fileCount = (Get-ChildItem -LiteralPath $deployRoot -Recurse -File | Measure-Object).Count
+    $sizeBytes = (Get-ChildItem -LiteralPath $deployRoot -Recurse -File | Measure-Object Length -Sum).Sum
+
+    Write-Host "Created deploy artifacts for '$PluginId'."
+    Write-Host "Runtime root: $(Get-RelativeDeployPath -Path $runtimeRoot)"
+    Write-Host "Runtime skills: $($skills.Count)"
+    Write-Host ("Deploy tree: {0} files, {1:N2} MB" -f $fileCount, ($sizeBytes / 1MB))
+}
+finally {
+    Pop-Location
+}

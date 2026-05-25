@@ -8,9 +8,6 @@ dependencies = [
 	"python-pptx>=1.0.2",
 ]
 
-[project.scripts]
-pptify = "pptify_cli:main"
-
 [project.optional-dependencies]
 plugins = [
 	"beautifulsoup4>=4.12.0",

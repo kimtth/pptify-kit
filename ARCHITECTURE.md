@@ -1,6 +1,6 @@
 # pptify Architecture
 
-This workspace snapshot is a PPTX plugin toolkit plus Copilot prompt assets. It does not currently contain an importable `pptify/` core renderer package or a `python -m pptify` command.
+This workspace snapshot is a PPTX plugin toolkit plus Copilot prompt assets. It does not currently contain an importable `pptify/` core renderer package or a `python -m pptify` command; lifecycle commands run through the `pptify-cli` directory entry point.
 
 ## Current Components
 
@@ -12,7 +12,6 @@ This workspace snapshot is a PPTX plugin toolkit plus Copilot prompt assets. It 
 - `pptify-core`: Agent Skills and workflow prompts used by Copilot or any generic coding agent when planning decks.
 - `pptify-cli`: Lifecycle commands for installing and uninstalling the pptify skill set into a local coding-agent home (`./.agent` by default).
 - `pptify-design`: local source-backed design context packs and attribution metadata.
-- `tests`: plugin-focused unit tests.
 
 ## Execution Model
 
@@ -21,10 +20,10 @@ Plugin scripts are called directly by file path and write JSON to stdout:
 ```powershell
 uv run python pptify-plugin/design/design_context_catalog.py --list --pretty
 uv run python pptify-plugin/images/text_prompt_to_infographic.py --provider auto --prompt "Cloud governance roadmap" --output-path infographic.png --pretty
-uv run python pptify-plugin/audit/audit.py tests/clustered_deck.json --json
+uv run python pptify-plugin/audit/audit.py deck-spec.json --json
 ```
 
-Extraction helpers are import APIs. Because `pptify-plugin` contains a dash, load those modules with `importlib.util.spec_from_file_location(...)`, as the test suite does for other plugin scripts.
+Extraction helpers are import APIs. Because `pptify-plugin` contains a dash, load those modules with `importlib.util.spec_from_file_location(...)`.
 
 ## Data Contracts
 
@@ -36,7 +35,7 @@ The prompt assets still use the agent-coordinate contract for generated deck spe
 - Shapes should carry explicit shape, fill, and line style.
 - Image-model attempts must record provider, model or deployment, prompt path, output path, status, and error details when generation fails.
 
-In this snapshot, that contract is planning/audit context. There is no local renderer package that consumes the full layout tree and writes a PPTX from `python -m pptify`.
+In this snapshot, that contract is planning/audit context. There is no local renderer package that consumes the full layout tree and writes a PPTX from `python -m pptify`; use `uv run python pptify-cli ...` only for install/help lifecycle commands.
 
 ## Image Generation Boundary
 
@@ -59,12 +58,6 @@ Restore with:
 `document_to_raptor_tree.py` currently uses deterministic local embeddings and does not require the MiniLM external assets.
 
 ## Quality Gates
-
-Run the current tests with:
-
-```powershell
-uv run python -m unittest discover -s tests -v
-```
 
 For generated artifacts, use the standalone audit plugin and PPTX package inspection scripts/helpers to confirm slide count, hidden-slide metadata, media counts, and collision status.
 

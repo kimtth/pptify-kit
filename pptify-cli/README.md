@@ -14,7 +14,7 @@ Runtime dependencies: `pptify-core`, `pptify-design`, `pptify-plugin`.
 ```powershell
 pptify install              # copy skills, workflows, plugin/design assets, policy into ./.agent/
 pptify install --dry-run    # preview without writing files
-pptify install --home <dir> # install into <dir>/.agent (e.g. tests/pptify-install-test/.agent)
+pptify install --home <dir> # install into <dir>/.agent (e.g. temp/pptify-install-test/.agent)
 
 pptify uninstall            # remove installed pptify assets from ./.agent/
 pptify uninstall --dry-run  # preview without removing files
@@ -40,7 +40,7 @@ pptify help --profile <id>  # print full JSON for one design profile
 
 ## Running Without Installation
 
-Call `pptify-cli` directly by directory when `uv tool install` is not used:
+Call `pptify-cli` directly by directory when running from this checkout:
 
 ```powershell
 uv run python pptify-cli install
@@ -72,14 +72,12 @@ home instead of a Copilot-only directory.
 
 | Skill | Description |
 | --- | --- |
+| `pptify-context-prep` | Prepare source material and design context before authoring a deck spec |
 | `pptify-deck-generation` | End-to-end PPTX generation workflow |
-| `pptify-tooling` | Plugin and CLI tool selection |
-| `pptify-json-spec-authoring` | Coordinate-explicit JSON spec authoring |
-| `pptify-source-ingestion` | Document and reference PPTX preparation |
-| `pptify-design-context` | Source-backed design template selection |
-| `pptify-visual-assets` | Icons, images, SVGs, and infographics |
-| `pptify-production-rendering` | Production-ready slide structure rules |
 | `pptify-quality-gates` | Audit validation and repair |
+| `pptify-slide-spec` | Coordinate-explicit JSON deck spec authoring and repair |
+| `pptify-tooling` | Plugin and CLI tool selection |
+| `pptify-visual-assets` | Icons, images, SVGs, and infographics |
 
 ## Available Design Profiles
 

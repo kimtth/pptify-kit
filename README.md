@@ -26,7 +26,7 @@ uv sync --extra plugins    # add source conversion, image search, vector tracing
 ```powershell
 uv run python pptify-cli install                              # → ./.agent/
 uv run python pptify-cli install --home ~                     # → ~/.agent/
-uv run python pptify-cli install --home tests/pptify-install-test  # → tests/pptify-install-test/.agent/
+uv run python pptify-cli install --home temp\pptify-install-test  # → temp\pptify-install-test\.agent\
 ```
 
 See [pptify-cli/README.md](pptify-cli/README.md) for `uninstall`, `help`, and `--dry-run`.
@@ -43,7 +43,7 @@ Copy-Item .env.template .env
 
 ```powershell
 uv run python pptify-plugin/design/design_context_catalog.py --list --pretty
-uv run python pptify-plugin/audit/audit.py tests/clustered_deck.json --json
+uv run python pptify-plugin/audit/audit.py deck-spec.json --json
 uv run python pptify-plugin/images/iconfy_search.py --query governance --collection fluent --color 0078D4 --pretty
 uv run python pptify-plugin/images/text_prompt_to_infographic.py --provider azure-openai --azure-endpoint "<endpoint>" --model "gpt-image-2" --prompt "..." --output-path out.png --pretty
 ```
